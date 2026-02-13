@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🐱 喵喵补丁生成器 v2.2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:linear-gradient(135deg,#fff9ed,#d6f2ff,#f0edf8);min-height:100vh;padding:20px;color:#4b5563}
+.container{max-width:960px;margin:0 auto}
+h1{text-align:center;font-size:28px;margin-bottom:8px;color:#333}
+.subtitle{text-align:center;color:#9ca3af;margin-bottom:30px;font-size:14px}
+.card{background:#fff;border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 4px 20px rgba(102,204,255,.12)}
+.card h2{font-size:16px;color:#4b5563;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.step{background:linear-gradient(135deg,#66ccff,#9fdfff);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.drop{border:3px dashed #b8e6ff;border-radius:16px;padding:40px;text-align:center;cursor:pointer;transition:all .3s}
+.drop:hover,.drop.active{border-color:#66ccff;background:#f0f9ff}
+.drop input{display:none}
+.drop .icon{font-size:48px;margin-bottom:12px}
+.drop p{color:#9ca3af;font-size:14px}
+.loaded{background:#e2f5f0;border:2px solid #d0f0e8;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:14px;color:#7cc9b8;font-weight:600;margin-top:12px}
+.targets{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tgt{padding:20px;border:3px solid #e8f4fc;border-radius:16px;cursor:pointer;transition:all .3s;text-align:center;background:#fff}
+.tgt:hover{border-color:#b8e6ff;transform:translateY(-2px)}
+.tgt.on{border-color:#66ccff;background:#f0f9ff;box-shadow:0 4px 12px rgba(102,204,255,.2)}
+.tgt .icon{font-size:32px;margin-bottom:8px}
+.tgt .name{font-size:15px;font-weight:700;color:#4b5563}
+.tgt .desc{font-size:12px;color:#9ca3af;margin-top:4px}
+.go-btn{width:100%;padding:16px;background:linear-gradient(135deg,#7cc9b8,#d0f0e8);border:none;border-radius:16px;font-size:17px;font-weight:700;color:#fff;cursor:pointer;transition:all .3s}
+.go-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,201,184,.3)}
+.go-btn:disabled{opacity:.5;cursor:not-allowed}
+.dl-btn{width:100%;padding:16px;background:linear-gradient(135deg,#9f7aea,#c4b5fd);border:none;border-radius:16px;font-size:17px;font-weight:700;color:#fff;cursor:pointer;transition:all .3s;margin-top:12px}
+.dl-btn:hover:not(:disabled){transform:translateY(-2px)}
+.dl-btn:disabled{opacity:.5;cursor:not-allowed}
+.log{background:#1a1a2e;border-radius:12px;padding:16px;max-height:400px;overflow-y:auto;font-family:'Fira Code',monospace;font-size:12px;line-height:1.8}
+.log .ok{color:#90EE90}.log .w{color:#FFB366}.log .e{color:#FF6B6B}.log .i{color:#87CEEB}.log .d{color:#666}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.stat{padding:8px 16px;background:#f0edf8;border-radius:10px;font-size:12px;font-weight:600;color:#9f7aea}
+.slot-check{margin-top:12px}
+.slot-row{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:13px;border-radius:8px;margin-bottom:4px}
+.slot-row.found{background:#e2f5f0;color:#7cc9b8}
+.slot-row.miss{background:#ffe8ec;color:#c9939c}
+.slot-icon{font-size:16px;width:20px;text-align:center}
+.howto{background:#fff9ed;border:2px solid #ffefd0;border-radius:12px;padding:16px;margin-top:16px}
+.howto h4{color:#ffb366;margin-bottom:8px;font-size:14px}
+.howto pre{background:#1a1a2e;color:#87CEEB;padding:12px;border-radius:8px;font-size:11px;line-height:1.6;overflow-x:auto;white-space:pre;margin-top:8px}
+.howto p{font-size:13px;color:#9ca3af;line-height:1.6}
+.tab-bar{display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid #e8f4fc;padding-bottom:8px}
+.tab-btn{padding:8px 16px;border:none;background:transparent;font-size:13px;font-weight:600;color:#9ca3af;cursor:pointer;border-radius:8px 8px 0 0;transition:all .2s}
+.tab-btn.active{background:#e8f4fc;color:#66ccff}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🐱 喵喵补丁生成器 v2.2</h1>
+<p class="subtitle">修复了插槽标记在 htm 模板中可见的问题</p>
+
+<div class="card">
+<h2><span class="step">1</span> 加载本地版</h2>
+<div class="drop" id="dropZone">
+<div class="icon">📂</div>
+<p>点击或拖拽本地版 HTML</p>
+<input type="file" id="fileInput" accept=".html">
+</div>
+<div id="fileInfo" style="display:none" class="loaded"></div>
+<div id="slotCheck" class="slot-check" style="display:none"></div>
+</div>
+
+<div class="card">
+<h2><span class="step">2</span> 选择目标</h2>
+<div class="targets">
+<div class="tgt on" id="btn-cf" onclick="pickTarget('cf')">
+<div class="icon">☁️</div>
+<div class="name">Cloudflare 同步版</div>
+<div class="desc">Workers KV 存储</div>
+</div>
+<div class="tgt" id="btn-gh" onclick="pickTarget('gh')">
+<div class="icon">🐙</div>
+<div class="name">GitHub 同步版</div>
+<div class="desc">Gist 存储</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<h2><span class="step">3</span> 转换</h2>
+<button class="go-btn" id="goBtn" onclick="convert()" disabled>🔄 开始转换</button>
+<div id="logBox" class="log" style="display:none"></div>
+<div id="statsBox" style="display:none"></div>
+<button class="dl-btn" id="dlBtn" onclick="download()" disabled style="display:none">💾 下载</button>
+</div>
+
+<div class="card">
+<h2>📋 使用指南</h2>
+<div class="tab-bar">
+<button class="tab-btn active" onclick="showTab('guide',this)">插槽标记</button>
+<button class="tab-btn" onclick="showTab('why',this)">为什么这样设计</button>
+<button class="tab-btn" onclick="showTab('trouble',this)">故障排除</button>
+</div>
+<div id="tab-guide">
+<div class="howto">
+<h4>📌 在本地版中添加这些标记注释（一次性）</h4>
+<p>⚠️ <b>htm 模板内</b>必须用 <code>${''\/* @SLOT:xxx *\/}</code> 格式（利用模板表达式+JS注释，渲染为空）。<br>
+JS 代码区域使用普通 <code>/* @SLOT:xxx */</code> 即可。</p>
+<pre id="slotTemplate"></pre>
+</div>
+</div>
+<div id="tab-why" style="display:none">
+<div class="howto">
+<h4>🤔 为什么 v2.2 改了标记格式？</h4>
+<p>
+<b>v2.1 的问题：</b><code>{/* comment */}</code> 在 htm 模板字面量中不是注释——它是纯文本！<br>
+htm 只认 <code>${'{}'}</code> 作为表达式插值，<code>{}</code> 单独出现就是文字。<br><br>
+<b>v2.2 的修复：</b>改为 <code>${'\'\'/* comment */}</code>，利用 JS 模板表达式 + 块注释，<br>
+表达式求值为空字符串 <code>''</code>，注释被忽略。渲染结果为空，但工具仍能搜索到标记。<br><br>
+<b>输出不保留标记：</b>转换后的文件不含任何 @SLOT 标记，是干净的最终版本。
+</p>
+</div>
+</div>
+<div id="tab-trouble" style="display:none">
+<div class="howto">
+<h4>🔧 常见问题</h4>
+<p>
+<b>Q: 界面显示 @SLOT 标记文字？</b><br>
+A: 本地版 htm 模板内的标记格式不对。必须用 <code>${'\'\'/* @SLOT:xxx */}</code> 而非 <code>{/* @SLOT:xxx */}</code>。<br><br>
+<b>Q: 某个插槽显示 ❌？</b><br>
+A: 说明本地版里缺少对应的 <code>@SLOT:xxx</code> 标记，按上方模板添加即可。<br><br>
+<b>Q: 转换后白屏？</b><br>
+A: 按 F12 查看控制台错误。<br><br>
+<b>Q: 想自定义同步地址？</b><br>
+A: 转换后搜索 <code>SYNC_URL</code> 修改即可。
+</p>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+/* ═══════════ 全局状态 ═══════════ */
+let src='', tgt='cf', out='';
+
+/* ═══════════ 插槽定义 ═══════════ */
+const SLOTS = [
+  ['SYNC_CONSTANTS',          '常量注入点',          false],
+  ['SYNC_HOOK_DEF',           '同步Hook定义点',      false],
+  ['SYNC_MODAL_DEF',          '同步弹窗定义点',      false],
+  ['SYNC_HOOK_INIT',          'App内Hook初始化',     false],
+  ['SYNC_MODAL_STATE',        '模态框状态键',         true],
+  ['TITLE_BADGE',             '标题Badge',           true],
+  ['SYNC_STATUS',             '同步状态指示器',       true],
+  ['SYNC_BUTTON',             'Header同步按钮',      true],
+  ['SYNC_APPLY_HANDLER',      '同步应用Handler',     true],
+  ['SYNC_MODAL_RENDER',       '同步弹窗渲染',         true],
+  ['PAGE_TITLE',              '页面标题',             true],
+  ['DOC_TITLE_FALLBACK',      'document.title还原',  false],
+];
+
+/* ═══════════ 文件处理 ═══════════ */
+const dz=document.getElementById('dropZone');
+const fi=document.getElementById('fileInput');
+dz.onclick=()=>fi.click();
+dz.ondragover=e=>{e.preventDefault();dz.classList.add('active')};
+dz.ondragleave=()=>dz.classList.remove('active');
+dz.ondrop=e=>{e.preventDefault();dz.classList.remove('active');load(e.dataTransfer.files[0])};
+fi.onchange=()=>{load(fi.files[0]);fi.value=''};
+
+function load(f){
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    src=e.target.result;
+    document.getElementById('fileInfo').style.display='flex';
+    document.getElementById('fileInfo').textContent=`✅ ${f.name} (${(f.size/1024).toFixed(1)}KB)`;
+    checkSlots();
+    document.getElementById('goBtn').disabled=false;
+  };
+  r.readAsText(f);
+}
+
+function checkSlots(){
+  const el=document.getElementById('slotCheck');
+  el.style.display='block';
+  let html='';
+  let allFound=true;
+  for(const[id,desc,paired]of SLOTS){
+    const tag=`@SLOT:${id}`;
+    const found=src.includes(tag);
+    if(!found)allFound=false;
+    html+=`<div class="slot-row ${found?'found':'miss'}"><span class="slot-icon">${found?'✅':'❌'}</span><code>${tag}</code> — ${desc}</div>`;
+    if(paired){
+      const endTag=`@SLOT:${id}_END`;
+      const endFound=src.includes(endTag);
+      if(!endFound)allFound=false;
+      html+=`<div class="slot-row ${endFound?'found':'miss'}"><span class="slot-icon">${endFound?'✅':'❌'}</span><code>${endTag}</code></div>`;
+    }
+  }
+  if(!allFound){
+    html=`<div style="padding:8px 12px;background:#fff3e6;border-radius:8px;margin-bottom:8px;font-size:13px;color:#cc8844">⚠️ 部分插槽缺失 — 缺失的插槽将使用回退匹配（可能不稳定）</div>`+html;
+  }else{
+    html=`<div style="padding:8px 12px;background:#e2f5f0;border-radius:8px;margin-bottom:8px;font-size:13px;color:#7cc9b8">✅ 所有插槽就位！</div>`+html;
+  }
+  el.innerHTML=html;
+}
+
+function pickTarget(t){tgt=t;document.querySelectorAll('.tgt').forEach(b=>b.classList.remove('on'));document.getElementById('btn-'+t).classList.add('on')}
+function showTab(id,btn){document.querySelectorAll('[id^="tab-"]').forEach(e=>e.style.display='none');document.getElementById('tab-'+id).style.display='block';document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}
+
+/* ═══════════ 补丁内容 ═══════════ */
+
+const CF={
+title:'云同步版',
+fileName:'index.html',
+constants:`const SYNC_URL='https://meow-sync-api.monickpoxno.workers.dev';`,
+css:`
+.sync-status{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,.2);border-radius:var(--radius-sm);font-size:11px;color:#fff}.sync-status .dot{width:8px;height:8px;border-radius:50%;background:#90EE90}.sync-status .dot.disconnected{background:#FFB366}.sync-status .dot.syncing{background:#87CEEB;animation:pulse 1s infinite}
+.header-btn.sync{background:rgba(124,201,184,.4);border-color:rgba(124,201,184,.6)}.header-btn.sync.connected{background:rgba(124,201,184,.6);border-color:rgba(124,201,184,.8)}
+.sync-info{background:var(--mint);border:2px solid var(--mint-soft);border-radius:var(--radius-md);padding:16px;margin-bottom:20px}.sync-info h4{color:var(--mint-dark);margin-bottom:8px}.sync-info p{font-size:13px;color:var(--text)}.sync-info .time{font-size:12px;color:var(--text-soft);margin-top:8px}`,
+
+hookDef:`const uCFS=(addToast)=>{const[sk,sSk]=useLocalStorage('syncKey','');const[ss,sSS]=useState('disconnected');const[lt,sLT]=useState(null);const ic=!!sk&&sk.length>=6;const fD=useCallback(async()=>{if(!ic)return null;sSS('syncing');try{const r=await fetch(SYNC_URL,{headers:{'X-Sync-Key':sk,'X-App-Type':'charcard'}});const j=await r.json();if(j.success){sSS('synced');if(j.data?._syncTime)sLT(j.data._syncTime);return j.data}throw new Error(j.error)}catch(e){sSS('disconnected');addToast('同步失败:'+e.message,'error');return null}},[sk,ic,addToast]);const pD=useCallback(async d=>{if(!ic)return false;sSS('syncing');try{const r=await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':sk,'X-App-Type':'charcard'},body:JSON.stringify(d)});const j=await r.json();if(j.success){sSS('synced');sLT(j.syncTime);return true}throw new Error(j.error)}catch(e){sSS('disconnected');addToast('上传失败:'+e.message,'error');return false}},[sk,ic,addToast]);const del=useCallback(async()=>{if(!ic)return;try{await fetch(SYNC_URL,{method:'DELETE',headers:{'X-Sync-Key':sk,'X-App-Type':'charcard'}});sLT(null);addToast('已删除','success')}catch{addToast('删除失败','error')}},[sk,ic,addToast]);const dc=useCallback(()=>{sSk('');sSS('disconnected');sLT(null)},[]);return{sk,sSk,ss,ic,lt,fD,pD,del,dc}};`,
+
+modalDef:`const SyncModal=memo(({show,onClose,sync,pv,pi,cfg,jL,pL,gr,gL,onApply,askConfirm})=>{const[key,sKey]=useState('');const[showK,sSK]=useState(false);const[sy,sSy]=useState(false);useEffect(()=>{if(show)sKey(sync.sk||'')},[show]);if(!show)return null;const connect=()=>{if(key.length<6)return;sync.sSk(key)};return html\`<\${Modal} show onClose=\${onClose} title="☁️ 云同步" headerClass="success">\${sync.ic?html\`<div class="sync-info"><h4>✅ 已连接</h4><p>其他设备用相同密钥同步。</p>\${sync.lt&&html\`<p class="time">上次: \${new Date(sync.lt).toLocaleString()}</p>\`}</div>\`:html\`<div style=\${{background:'var(--cream)',borderRadius:'var(--radius-md)',padding:16,marginBottom:16}}><h4 style=\${{color:'var(--text-dark)',marginBottom:8}}>🔑 设置同步密钥</h4><p style=\${{fontSize:13,color:'var(--text-soft)'}}>输入至少6位密钥。</p></div>\`}<div class="form-group"><label>密钥</label><div class="form-row"><div class="form-group"><input type=\${showK?'text':'password'} value=\${key} onChange=\${e=>sKey(e.target.value)} placeholder="至少6位" disabled=\${sync.ic}/></div><button class="btn secondary" style=\${{padding:'10px'}} onClick=\${()=>sSK(!showK)}>\${showK?'🙈':'👁️'}</button></div></div>\${!sync.ic?html\`<button class="btn success" style=\${{width:'100%'}} onClick=\${connect} disabled=\${key.length<6}>🔗 连接</button>\`:html\`<><div style=\${{display:'flex',gap:10,marginBottom:16}}><button class="btn primary" style=\${{flex:1}} onClick=\${async()=>{sSy(true);const d=await sync.fD();sSy(false);if(d)onApply(d)}} disabled=\${sy}>⬇️ 拉取</button><button class="btn success" style=\${{flex:1}} onClick=\${async()=>{sSy(true);await sync.pD({pv,pi,cfg,jL,pL,gr,gL});sSy(false)}} disabled=\${sy}>⬆️ 推送</button></div><div style=\${{display:'flex',gap:10}}><button class="btn secondary" style=\${{flex:1}} onClick=\${sync.dc}>🔌 断开</button><button class="btn danger" style=\${{flex:1}} onClick=\${async()=>{const ok=await askConfirm('删除云端数据？',{title:'删除',icon:'🗑️',type:'danger',dangerBtn:true,confirmText:'删除'});if(ok)await sync.del()}}>🗑️</button></div>\`}\${sy&&html\`<p style=\${{textAlign:'center',marginTop:16,color:'var(--sky)'}}>⏳</p>\`}<//>\`});`,
+
+hookInit:`const sync=uCFS(addToast);`,
+modalState:`sync:0`,
+badge:`<span class="ver-badge">☁️ 云同步版</span>`,
+status:`<div class="sync-status"><span class=\${'dot '+(sync.ic?(sync.ss==='syncing'?'syncing':''):'disconnected')}/><span>\${sync.ic?(sync.ss==='syncing'?'同步中':'已连接'):'未连接'}</span></div>`,
+button:`<button class=\${'header-btn sync '+(sync.ic?'connected':'')} onClick=\${()=>openModal('sync')}>☁️<span class="label">同步</span></button>`,
+
+applyHandler:`const handleApplyCloud=useCallback(d=>{if(!d)return;if(d.pv)setProviders(d.pv);if(d.pi!==undefined)setProviderIdx(d.pi);if(d.cfg)setConfig(d.cfg);if(d.jL)setJbList(d.jL);if(d.pL)setPromptList(d.pL);if(d.gr)setGuideRows(d.gr);if(d.gL)setGuideList(d.gL);addToast('已同步','success')},[addToast]);`,
+
+modalRender:`\${!!modals.sync&&html\`<\${SyncModal} show onClose=\${()=>openModal('sync',0)} sync=\${sync} pv=\${providers} pi=\${providerIdx} cfg=\${config} jL=\${jbList} pL=\${promptList} gr=\${guideRows} gL=\${guideList} onApply=\${handleApplyCloud} askConfirm=\${askConfirm}/>\`}`,
+docTitle:`document.title='🐱 喵喵角色卡工坊 - 云同步版'`,
+};
+
+const GH={
+title:'GitHub云同步版',
+fileName:'index(github).html',
+constants:`const GFN='meow-sync.json';`,
+css:`
+.sync-status{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,.2);border-radius:var(--radius-sm);font-size:11px;color:#fff}.sync-status .dot{width:8px;height:8px;border-radius:50%;background:#90EE90}.sync-status .dot.disconnected{background:#FFB366}
+.header-btn.github{background:rgba(159,122,234,.4);border-color:rgba(159,122,234,.6)}.header-btn.github.connected{background:rgba(124,201,184,.5);border-color:rgba(124,201,184,.7)}
+.github-logo{width:18px;height:18px;vertical-align:middle;fill:currentColor}
+.sync-info{background:var(--purple-pale);border:2px solid var(--purple-soft);border-radius:var(--radius-md);padding:16px;margin-bottom:20px}.sync-info h4{color:var(--purple);margin-bottom:8px}.sync-info p{font-size:13px;color:var(--text)}.sync-info .time{font-size:12px;color:var(--text-soft);margin-top:8px}.sync-info .gist-link{font-size:12px;color:var(--purple);display:inline-block;margin-top:8px}
+.step-guide{background:var(--cream);border-radius:var(--radius-md);padding:16px;margin-bottom:20px}.step-guide h4{color:var(--text-dark);margin-bottom:12px}.step-guide ol{padding-left:20px;font-size:13px}.step-guide li{margin-bottom:8px}.step-guide a{color:var(--purple)}`,
+
+hookDef:`const GHLogo=()=>html\`<svg class="github-logo" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>\`;
+const uGHS=()=>{const[tk,sTk]=useLocalStorage('ght','');const[gi,sGi]=useLocalStorage('gid','');const[ss,sSS]=useState('disconnected');const[lt,sLT]=useState(null);const[gu,sGU]=useState('');const[un,sUN]=useState('');const ic=!!tk;const vt=useCallback(async t=>{try{const r=await fetch('https://api.github.com/user',{headers:{'Authorization':\`Bearer \${t}\`}});if(!r.ok)throw 0;return{ok:true,un:(await r.json()).login}}catch{return{ok:false}}},[]);const fog=useCallback(async()=>{if(!tk)return null;try{if(gi){const r=await fetch(\`https://api.github.com/gists/\${gi}\`,{headers:{'Authorization':\`Bearer \${tk}\`}});if(r.ok){sGU((await r.json()).html_url);return gi}}const lr=await fetch('https://api.github.com/gists?per_page=100',{headers:{'Authorization':\`Bearer \${tk}\`}});const gs=await lr.json();const ex=gs.find(g=>g.files[GFN]);if(ex){sGi(ex.id);sGU(ex.html_url);return ex.id}const cr=await fetch('https://api.github.com/gists',{method:'POST',headers:{'Authorization':\`Bearer \${tk}\`,'Content-Type':'application/json'},body:JSON.stringify({description:'🐱 Meow Sync',public:false,files:{[GFN]:{content:'{}'}}})});const ng=await cr.json();sGi(ng.id);sGU(ng.html_url);return ng.id}catch{return null}},[tk,gi]);const fD=useCallback(async()=>{if(!tk)return null;sSS('syncing');try{const id=await fog();if(!id){sSS('disconnected');return null}const r=await fetch(\`https://api.github.com/gists/\${id}\`,{headers:{'Authorization':\`Bearer \${tk}\`}});const d=JSON.parse((await r.json()).files[GFN]?.content||'{}');sSS('synced');if(d._st)sLT(d._st);return d}catch{sSS('disconnected');return null}},[tk,fog]);const pD=useCallback(async d=>{if(!tk)return false;sSS('syncing');try{const id=await fog();if(!id){sSS('disconnected');return false}const sd={...d,_st:Date.now()};await fetch(\`https://api.github.com/gists/\${id}\`,{method:'PATCH',headers:{'Authorization':\`Bearer \${tk}\`,'Content-Type':'application/json'},body:JSON.stringify({files:{[GFN]:{content:JSON.stringify(sd,null,2)}}})});sSS('synced');sLT(sd._st);return true}catch{sSS('disconnected');return false}},[tk,fog]);const dc=useCallback(()=>{sTk('');sGi('');sGU('');sUN('');sSS('disconnected');sLT(null)},[]);return{tk,sTk,gi,gu,ss,ic,lt,un,sUN,fD,pD,vt,dc,fog}};`,
+
+modalDef:`const SyncModal=memo(({show,onClose,sync,pv,pi,cfg,jL,pL,gr,gL,onApply,addToast})=>{const[it,sIt]=useState('');const[st2,sSt2]=useState(false);const[sy,sSy]=useState(false);useEffect(()=>{if(show&&sync.tk)sync.vt(sync.tk).then(r=>{if(r.ok)sync.sUN(r.un)})},[show]);if(!show)return null;return html\`<\${Modal} show onClose=\${onClose} title=\${html\`<\${GHLogo}/> GitHub 同步\`} headerClass="purple">\${sync.ic?html\`<div class="sync-info"><h4>✅ @\${sync.un}</h4>\${sync.lt&&html\`<p class="time">上次: \${new Date(sync.lt).toLocaleString()}</p>\`}\${sync.gu&&html\`<a href=\${sync.gu} target="_blank" class="gist-link">📄 Gist</a>\`}</div>\`:html\`<div class="step-guide"><h4>🔑 Token</h4><ol><li><a href="https://github.com/settings/tokens?type=beta" target="_blank">GitHub</a> → Fine-grained Token</li><li>Gists → Read and Write</li></ol></div>\`}\${!sync.ic?html\`<><div class="form-group"><div class="form-row"><div class="form-group"><input type=\${st2?'text':'password'} value=\${it} onChange=\${e=>sIt(e.target.value)} placeholder="ghp_xxx"/></div><button class="btn secondary" style=\${{padding:'10px'}} onClick=\${()=>sSt2(!st2)}>\${st2?'🙈':'👁️'}</button></div></div><button class="btn purple" style=\${{width:'100%'}} onClick=\${async()=>{sSy(true);const r=await sync.vt(it);sSy(false);if(r.ok){sync.sTk(it);sync.sUN(r.un);sIt('');await sync.fog();addToast('OK','success')}else addToast('无效','error')}} disabled=\${sy||!it.trim()}>\${sy?'⏳':'🔗 连接'}</button></>\`:html\`<><div style=\${{display:'flex',gap:10,marginBottom:16}}><button class="btn primary" style=\${{flex:1}} onClick=\${async()=>{sSy(true);const d=await sync.fD();sSy(false);if(d&&Object.keys(d).length>1){onApply(d);addToast('OK','success')}else addToast('空','warning')}} disabled=\${sy}>⬇️</button><button class="btn success" style=\${{flex:1}} onClick=\${async()=>{sSy(true);const ok=await sync.pD({pv,pi,cfg,jL,pL,gr,gL});sSy(false);ok?addToast('OK','success'):addToast('失败','error')}} disabled=\${sy}>⬆️</button></div><button class="btn secondary" style=\${{width:'100%'}} onClick=\${()=>{sync.dc();addToast('断开','info')}}>🔌</button></>\`}<//>\`});`,
+
+hookInit:`const sync=uGHS();`,
+modalState:`sync:0`,
+badge:`<span class="ver-badge">\${html\`<\${GHLogo}/>\`} GitHub</span>`,
+status:`<div class="sync-status"><span class=\${'dot '+(sync.ic?'':'disconnected')}/><span>\${sync.ic?'已连接':'未连接'}</span></div>`,
+button:`<button class=\${'header-btn github '+(sync.ic?'connected':'')} onClick=\${()=>openModal('sync')}>\${html\`<\${GHLogo}/>\`}<span class="label">同步</span></button>`,
+
+applyHandler:`const handleApplyCloud=useCallback(d=>{if(!d)return;if(d.pv)setProviders(d.pv);if(d.pi!==undefined)setProviderIdx(d.pi);if(d.cfg)setConfig(d.cfg);if(d.jL)setJbList(d.jL);if(d.pL)setPromptList(d.pL);if(d.gr)setGuideRows(d.gr);if(d.gL)setGuideList(d.gL);addToast('已同步','success')},[addToast]);`,
+modalRender:`\${!!modals.sync&&html\`<\${SyncModal} show onClose=\${()=>openModal('sync',0)} sync=\${sync} pv=\${providers} pi=\${providerIdx} cfg=\${config} jL=\${jbList} pL=\${promptList} gr=\${guideRows} gL=\${guideList} onApply=\${handleApplyCloud} addToast=\${addToast}/>\`}`,
+docTitle:`document.title='🐱 喵喵角色卡工坊 - GitHub云同步版'`,
+};
+
+/* ═══════════ 转换引擎 v2.2 ═══════════ */
+function convert(){
+  if(!src)return;
+  const P=tgt==='gh'?GH:CF;
+  const logEl=document.getElementById('logBox');
+  logEl.style.display='block';
+  logEl.innerHTML='';
+  const L=(m,t='i')=>{logEl.innerHTML+=`<div class="${t}">${m}</div>`;logEl.scrollTop=9e9};
+  
+  let h=src, n=0;
+
+  // 🔧 v2.2: 不再在输出中保留任何 @SLOT 标记
+  const slotReplace=(id,content,desc)=>{
+    const patterns=[
+      `/* @SLOT:${id} */`,
+      `{/* @SLOT:${id} */}`,
+      `<!-- @SLOT:${id} -->`
+    ];
+    // 也支持 ${''/* @SLOT:xxx */} 格式
+    const exprPat=new RegExp(`\\$\\{''\\s*/\\*\\s*@SLOT:${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*\\*/\\s*\\}`);
+    const exprMatch=h.match(exprPat);
+    if(exprMatch){
+      h=h.replace(exprMatch[0], content);
+      n++; L(`✅ ${desc}`,'ok'); return true;
+    }
+    for(const tag of patterns){
+      if(h.includes(tag)){
+        h=h.replace(tag, content);
+        n++; L(`✅ ${desc}`,'ok'); return true;
+      }
+    }
+    L(`⚠️ 未找到 @SLOT:${id} — ${desc}`,'w');
+    return false;
+  };
+
+  const slotReplacePair=(id,content,desc)=>{
+    // 支持 ${''/* @SLOT:xxx */}...${''/* @SLOT:xxx_END */} 格式（htm模板内）
+    const exprRe=new RegExp(
+      `\\$\\{''\\s*/\\*\\s*@SLOT:${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*\\*/\\s*\\}[\\s\\S]*?\\$\\{''\\s*/\\*\\s*@SLOT:${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}_END\\s*\\*/\\s*\\}`
+    );
+    if(exprRe.test(h)){
+      h=h.replace(exprRe, content);
+      n++; L(`✅ ${desc}`,'ok'); return true;
+    }
+    // 支持 /* @SLOT:xxx */.../* @SLOT:xxx_END */ 格式（JS代码区）
+    const jsRe=new RegExp(`/\\*\\s*@SLOT:${id}\\s*\\*/[\\s\\S]*?/\\*\\s*@SLOT:${id}_END\\s*\\*/`);
+    if(jsRe.test(h)){
+      h=h.replace(jsRe, content);
+      n++; L(`✅ ${desc}`,'ok'); return true;
+    }
+    // 支持 {/* @SLOT:xxx */}...{/* @SLOT:xxx_END */} 格式（旧版）
+    const htmRe=new RegExp(`\\{/\\*\\s*@SLOT:${id}\\s*\\*/\\}[\\s\\S]*?\\{/\\*\\s*@SLOT:${id}_END\\s*\\*/\\}`);
+    if(htmRe.test(h)){
+      h=h.replace(htmRe, content);
+      n++; L(`✅ ${desc}`,'ok'); return true;
+    }
+    // HTML注释格式
+    const htmlRe=new RegExp(`<!--\\s*@SLOT:${id}\\s*-->[\\s\\S]*?<!--\\s*@SLOT:${id}_END\\s*-->`);
+    if(htmlRe.test(h)){
+      h=h.replace(htmlRe, content);
+      n++; L(`✅ ${desc}`,'ok'); return true;
+    }
+    L(`⚠️ 未找到 @SLOT:${id}..._END — ${desc}`,'w');
+    return false;
+  };
+
+  L(`🐱 转换 → ${P.title}`,'i');
+  L('─'.repeat(50),'d');
+
+  // 1. 页面标题
+  slotReplacePair('PAGE_TITLE', `<title>🐱 喵喵角色卡工坊 - ${P.title}</title>`, '页面标题');
+
+  // 2. CSS
+  if(h.includes('</style>')){
+    h=h.replace('</style>', P.css+'\n</style>');
+    n++; L('✅ 注入同步 CSS','ok');
+  }
+
+  // 3. 常量
+  slotReplace('SYNC_CONSTANTS', P.constants, '同步常量');
+
+  // 4. Hook 定义
+  slotReplace('SYNC_HOOK_DEF', P.hookDef, '同步 Hook 定义');
+
+  // 5. 弹窗定义
+  slotReplace('SYNC_MODAL_DEF', P.modalDef, '同步弹窗组件');
+
+  // 6. App 内 Hook 初始化
+  slotReplace('SYNC_HOOK_INIT', P.hookInit, 'Hook 初始化');
+
+  // 7. 模态框状态
+  slotReplacePair('SYNC_MODAL_STATE', P.modalState, '模态框状态');
+
+  // 8. 标题 Badge
+  slotReplacePair('TITLE_BADGE', P.badge, '标题 Badge');
+
+  // 9. 同步状态指示器
+  slotReplacePair('SYNC_STATUS', P.status, '同步状态');
+
+  // 10. 同步按钮（替换掉原来的备份按钮）
+  slotReplacePair('SYNC_BUTTON', P.button, '同步按钮');
+
+  // 11. Apply Handler（替换掉原来的 handleApplyBackup）
+  slotReplacePair('SYNC_APPLY_HANDLER', P.applyHandler, '同步应用处理器');
+
+  // 12. 弹窗渲染（替换掉原来的 BackupModal 渲染）
+  slotReplacePair('SYNC_MODAL_RENDER', P.modalRender, '弹窗渲染');
+
+  // 13. document.title 回退值
+  slotReplace('DOC_TITLE_FALLBACK', '', 'document.title');
+  if(P.docTitle){
+    h=h.replace(/document\.title='🐱 喵喵角色卡工坊[^']*'/g, P.docTitle);
+    L('✅ 替换 document.title','ok');
+  }
+
+  L('─'.repeat(50),'d');
+  L(`🎉 完成！共 ${n} 处修改`,'ok');
+
+  out=h;
+  document.getElementById('statsBox').style.display='block';
+  document.getElementById('statsBox').innerHTML=`<div class="stats"><span class="stat">📝 ${n} 处</span><span class="stat">📦 ${(new Blob([h]).size/1024).toFixed(1)}KB</span><span class="stat">🎯 ${P.title}</span></div>`;
+  const dl=document.getElementById('dlBtn');dl.style.display='block';dl.disabled=false;
+}
+
+function download(){
+  if(!out)return;
+  const P=tgt==='gh'?GH:CF;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([out],{type:'text/html'}));
+  a.download=P.fileName;
+  a.click();
+}
+
+document.getElementById('slotTemplate').textContent=`
+// ═══ <title> 标签处（HTML注释格式）：
+<!-- @SLOT:PAGE_TITLE -->
+<title>🐱 喵喵角色卡工坊 - 本地版</title>
+<!-- @SLOT:PAGE_TITLE_END -->
+
+// ═══ 在常量区域末尾加：
+/* @SLOT:SYNC_CONSTANTS */
+
+// ═══ 在 ErrorBoundary 之前加：
+/* @SLOT:SYNC_HOOK_DEF */
+/* @SLOT:SYNC_MODAL_DEF */
+
+// ═══ 在 App 组件内 useConfirm() 后面加：
+/* @SLOT:SYNC_HOOK_INIT */
+
+// ═══ modals 状态对象中（注意内容在标记之间）：
+/* @SLOT:SYNC_MODAL_STATE */
+/* @SLOT:SYNC_MODAL_STATE_END */
+
+// ═══ htm 模板内必须用 \${''} 格式！═══
+
+// Header 标题 badge：
+\${''/* @SLOT:TITLE_BADGE */}<span class="ver-badge">📱 本地版</span>\${''/* @SLOT:TITLE_BADGE_END */}
+
+// Header actions 同步状态（留空）：
+\${''/* @SLOT:SYNC_STATUS */}\${''/* @SLOT:SYNC_STATUS_END */}
+
+// 同步按钮区域（留空，备份按钮放外面）：
+\${''/* @SLOT:SYNC_BUTTON */}\${''/* @SLOT:SYNC_BUTTON_END */}
+
+// ═══ JS 代码区 ═══
+
+// handleApplyBackup 处：
+/* @SLOT:SYNC_APPLY_HANDLER */
+const handleApplyBackup=useCallback(d=>{...},[addToast]);
+/* @SLOT:SYNC_APPLY_HANDLER_END */
+
+// 弹窗渲染（留空）：
+\${''/* @SLOT:SYNC_MODAL_RENDER */}\${''/* @SLOT:SYNC_MODAL_RENDER_END */}
+
+// document.title 还原处：
+/* @SLOT:DOC_TITLE_FALLBACK */
+`.trim();
+</script>
+</body>
+</html>
