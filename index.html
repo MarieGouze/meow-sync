@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>🐱 喵喵补丁生成器 v2.2</title>
+<title>🐱 喵喵补丁生成器 v2.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:linear-gradient(135deg,#fff9ed,#d6f2ff,#f0edf8);min-height:100vh;padding:20px;color:#4b5563}
@@ -52,8 +52,8 @@ h1{text-align:center;font-size:28px;margin-bottom:8px;color:#333}
 </head>
 <body>
 <div class="container">
-<h1>🐱 喵喵补丁生成器 v2.2</h1>
-<p class="subtitle">修复了插槽标记在 htm 模板中可见的问题</p>
+<h1>🐱 喵喵补丁生成器 v2.3</h1>
+<p class="subtitle">移除云同步状态指示器，只保留 API 连接状态</p>
 
 <div class="card">
 <h2><span class="step">1</span> 加载本地版</h2>
@@ -107,12 +107,11 @@ JS 代码区域使用普通 <code>/* @SLOT:xxx */</code> 即可。</p>
 </div>
 <div id="tab-why" style="display:none">
 <div class="howto">
-<h4>🤔 为什么 v2.2 改了标记格式？</h4>
+<h4>🤔 为什么 v2.3 移除了云同步状态指示器？</h4>
 <p>
-<b>v2.1 的问题：</b><code>{/* comment */}</code> 在 htm 模板字面量中不是注释——它是纯文本！<br>
-htm 只认 <code>${'{}'}</code> 作为表达式插值，<code>{}</code> 单独出现就是文字。<br><br>
-<b>v2.2 的修复：</b>改为 <code>${'\'\'/* comment */}</code>，利用 JS 模板表达式 + 块注释，<br>
-表达式求值为空字符串 <code>''</code>，注释被忽略。渲染结果为空，但工具仍能搜索到标记。<br><br>
+<b>v2.2 的问题：</b>Header 同时显示 API 连接状态和云同步状态两个指示器，信息冗余且占空间。<br><br>
+<b>v2.3 的改进：</b>移除云同步连接状态指示器（SYNC_STATUS 插槽），只保留原有的 API 连接状态按钮。<br>
+用户可通过同步按钮打开弹窗查看同步详情。<br><br>
 <b>输出不保留标记：</b>转换后的文件不含任何 @SLOT 标记，是干净的最终版本。
 </p>
 </div>
@@ -139,7 +138,7 @@ A: 转换后搜索 <code>SYNC_URL</code> 修改即可。
 /* ═══════════ 全局状态 ═══════════ */
 let src='', tgt='cf', out='';
 
-/* ═══════════ 插槽定义 ═══════════ */
+/* ═══════════ 插槽定义（移除了 SYNC_STATUS） ═══════════ */
 const SLOTS = [
   ['SYNC_CONSTANTS',          '常量注入点',          false],
   ['SYNC_HOOK_DEF',           '同步Hook定义点',      false],
@@ -147,7 +146,6 @@ const SLOTS = [
   ['SYNC_HOOK_INIT',          'App内Hook初始化',     false],
   ['SYNC_MODAL_STATE',        '模态框状态键',         true],
   ['TITLE_BADGE',             '标题Badge',           true],
-  ['SYNC_STATUS',             '同步状态指示器',       true],
   ['SYNC_BUTTON',             'Header同步按钮',      true],
   ['SYNC_APPLY_HANDLER',      '同步应用Handler',     true],
   ['SYNC_MODAL_RENDER',       '同步弹窗渲染',         true],
@@ -194,6 +192,10 @@ function checkSlots(){
       html+=`<div class="slot-row ${endFound?'found':'miss'}"><span class="slot-icon">${endFound?'✅':'❌'}</span><code>${endTag}</code></div>`;
     }
   }
+  // 检查是否有旧版 SYNC_STATUS 插槽（提示用户可以移除）
+  if(src.includes('@SLOT:SYNC_STATUS')){
+    html+=`<div class="slot-row found"><span class="slot-icon">ℹ️</span><code>@SLOT:SYNC_STATUS</code> — 已弃用（v2.3 不再需要，将清空该区域）</div>`;
+  }
   if(!allFound){
     html=`<div style="padding:8px 12px;background:#fff3e6;border-radius:8px;margin-bottom:8px;font-size:13px;color:#cc8844">⚠️ 部分插槽缺失 — 缺失的插槽将使用回退匹配（可能不稳定）</div>`+html;
   }else{
@@ -212,7 +214,6 @@ title:'云同步版',
 fileName:'index.html',
 constants:`const SYNC_URL='https://meow-sync-api.monickpoxno.workers.dev';`,
 css:`
-.sync-status{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,.2);border-radius:var(--radius-sm);font-size:11px;color:#fff}.sync-status .dot{width:8px;height:8px;border-radius:50%;background:#90EE90}.sync-status .dot.disconnected{background:#FFB366}.sync-status .dot.syncing{background:#87CEEB;animation:pulse 1s infinite}
 .header-btn.sync{background:rgba(124,201,184,.4);border-color:rgba(124,201,184,.6)}.header-btn.sync.connected{background:rgba(124,201,184,.6);border-color:rgba(124,201,184,.8)}
 .sync-info{background:var(--mint);border:2px solid var(--mint-soft);border-radius:var(--radius-md);padding:16px;margin-bottom:20px}.sync-info h4{color:var(--mint-dark);margin-bottom:8px}.sync-info p{font-size:13px;color:var(--text)}.sync-info .time{font-size:12px;color:var(--text-soft);margin-top:8px}`,
 
@@ -223,7 +224,6 @@ modalDef:`const SyncModal=memo(({show,onClose,sync,pv,pi,cfg,jL,pL,gr,gL,onApply
 hookInit:`const sync=uCFS(addToast);`,
 modalState:`sync:0`,
 badge:`<span class="ver-badge">☁️ 云同步版</span>`,
-status:`<div class="sync-status"><span class=\${'dot '+(sync.ic?(sync.ss==='syncing'?'syncing':''):'disconnected')}/><span>\${sync.ic?(sync.ss==='syncing'?'同步中':'已连接'):'未连接'}</span></div>`,
 button:`<button class=\${'header-btn sync '+(sync.ic?'connected':'')} onClick=\${()=>openModal('sync')}>☁️<span class="label">同步</span></button>`,
 
 applyHandler:`const handleApplyCloud=useCallback(d=>{if(!d)return;if(d.pv)setProviders(d.pv);if(d.pi!==undefined)setProviderIdx(d.pi);if(d.cfg)setConfig(d.cfg);if(d.jL)setJbList(d.jL);if(d.pL)setPromptList(d.pL);if(d.gr)setGuideRows(d.gr);if(d.gL)setGuideList(d.gL);addToast('已同步','success')},[addToast]);`,
@@ -237,7 +237,6 @@ title:'GitHub云同步版',
 fileName:'index(github).html',
 constants:`const GFN='meow-sync.json';`,
 css:`
-.sync-status{display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(255,255,255,.2);border-radius:var(--radius-sm);font-size:11px;color:#fff}.sync-status .dot{width:8px;height:8px;border-radius:50%;background:#90EE90}.sync-status .dot.disconnected{background:#FFB366}
 .header-btn.github{background:rgba(159,122,234,.4);border-color:rgba(159,122,234,.6)}.header-btn.github.connected{background:rgba(124,201,184,.5);border-color:rgba(124,201,184,.7)}
 .github-logo{width:18px;height:18px;vertical-align:middle;fill:currentColor}
 .sync-info{background:var(--purple-pale);border:2px solid var(--purple-soft);border-radius:var(--radius-md);padding:16px;margin-bottom:20px}.sync-info h4{color:var(--purple);margin-bottom:8px}.sync-info p{font-size:13px;color:var(--text)}.sync-info .time{font-size:12px;color:var(--text-soft);margin-top:8px}.sync-info .gist-link{font-size:12px;color:var(--purple);display:inline-block;margin-top:8px}
@@ -251,7 +250,6 @@ modalDef:`const SyncModal=memo(({show,onClose,sync,pv,pi,cfg,jL,pL,gr,gL,onApply
 hookInit:`const sync=uGHS();`,
 modalState:`sync:0`,
 badge:`<span class="ver-badge">\${html\`<\${GHLogo}/>\`} GitHub</span>`,
-status:`<div class="sync-status"><span class=\${'dot '+(sync.ic?'':'disconnected')}/><span>\${sync.ic?'已连接':'未连接'}</span></div>`,
 button:`<button class=\${'header-btn github '+(sync.ic?'connected':'')} onClick=\${()=>openModal('sync')}>\${html\`<\${GHLogo}/>\`}<span class="label">同步</span></button>`,
 
 applyHandler:`const handleApplyCloud=useCallback(d=>{if(!d)return;if(d.pv)setProviders(d.pv);if(d.pi!==undefined)setProviderIdx(d.pi);if(d.cfg)setConfig(d.cfg);if(d.jL)setJbList(d.jL);if(d.pL)setPromptList(d.pL);if(d.gr)setGuideRows(d.gr);if(d.gL)setGuideList(d.gL);addToast('已同步','success')},[addToast]);`,
@@ -259,7 +257,7 @@ modalRender:`\${!!modals.sync&&html\`<\${SyncModal} show onClose=\${()=>openModa
 docTitle:`document.title='🐱 喵喵角色卡工坊 - GitHub云同步版'`,
 };
 
-/* ═══════════ 转换引擎 v2.2 ═══════════ */
+/* ═══════════ 转换引擎 v2.3 ═══════════ */
 function convert(){
   if(!src)return;
   const P=tgt==='gh'?GH:CF;
@@ -270,14 +268,12 @@ function convert(){
   
   let h=src, n=0;
 
-  // 🔧 v2.2: 不再在输出中保留任何 @SLOT 标记
   const slotReplace=(id,content,desc)=>{
     const patterns=[
       `/* @SLOT:${id} */`,
       `{/* @SLOT:${id} */}`,
       `<!-- @SLOT:${id} -->`
     ];
-    // 也支持 ${''/* @SLOT:xxx */} 格式
     const exprPat=new RegExp(`\\$\\{''\\s*/\\*\\s*@SLOT:${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*\\*/\\s*\\}`);
     const exprMatch=h.match(exprPat);
     if(exprMatch){
@@ -295,7 +291,6 @@ function convert(){
   };
 
   const slotReplacePair=(id,content,desc)=>{
-    // 支持 ${''/* @SLOT:xxx */}...${''/* @SLOT:xxx_END */} 格式（htm模板内）
     const exprRe=new RegExp(
       `\\$\\{''\\s*/\\*\\s*@SLOT:${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\s*\\*/\\s*\\}[\\s\\S]*?\\$\\{''\\s*/\\*\\s*@SLOT:${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}_END\\s*\\*/\\s*\\}`
     );
@@ -303,19 +298,16 @@ function convert(){
       h=h.replace(exprRe, content);
       n++; L(`✅ ${desc}`,'ok'); return true;
     }
-    // 支持 /* @SLOT:xxx */.../* @SLOT:xxx_END */ 格式（JS代码区）
     const jsRe=new RegExp(`/\\*\\s*@SLOT:${id}\\s*\\*/[\\s\\S]*?/\\*\\s*@SLOT:${id}_END\\s*\\*/`);
     if(jsRe.test(h)){
       h=h.replace(jsRe, content);
       n++; L(`✅ ${desc}`,'ok'); return true;
     }
-    // 支持 {/* @SLOT:xxx */}...{/* @SLOT:xxx_END */} 格式（旧版）
     const htmRe=new RegExp(`\\{/\\*\\s*@SLOT:${id}\\s*\\*/\\}[\\s\\S]*?\\{/\\*\\s*@SLOT:${id}_END\\s*\\*/\\}`);
     if(htmRe.test(h)){
       h=h.replace(htmRe, content);
       n++; L(`✅ ${desc}`,'ok'); return true;
     }
-    // HTML注释格式
     const htmlRe=new RegExp(`<!--\\s*@SLOT:${id}\\s*-->[\\s\\S]*?<!--\\s*@SLOT:${id}_END\\s*-->`);
     if(htmlRe.test(h)){
       h=h.replace(htmlRe, content);
@@ -355,16 +347,21 @@ function convert(){
   // 8. 标题 Badge
   slotReplacePair('TITLE_BADGE', P.badge, '标题 Badge');
 
-  // 9. 同步状态指示器
-  slotReplacePair('SYNC_STATUS', P.status, '同步状态');
+  // 9. 清空旧版 SYNC_STATUS 插槽（如果存在）
+  const hasSyncStatus = h.includes('@SLOT:SYNC_STATUS');
+  if(hasSyncStatus){
+    slotReplacePair('SYNC_STATUS', '', '清空云同步状态指示器（已弃用）');
+  } else {
+    L('ℹ️ 无 SYNC_STATUS 插槽（已弃用，跳过）','d');
+  }
 
-  // 10. 同步按钮（替换掉原来的备份按钮）
+  // 10. 同步按钮
   slotReplacePair('SYNC_BUTTON', P.button, '同步按钮');
 
-  // 11. Apply Handler（替换掉原来的 handleApplyBackup）
+  // 11. Apply Handler
   slotReplacePair('SYNC_APPLY_HANDLER', P.applyHandler, '同步应用处理器');
 
-  // 12. 弹窗渲染（替换掉原来的 BackupModal 渲染）
+  // 12. 弹窗渲染
   slotReplacePair('SYNC_MODAL_RENDER', P.modalRender, '弹窗渲染');
 
   // 13. document.title 回退值
@@ -417,9 +414,6 @@ document.getElementById('slotTemplate').textContent=`
 // Header 标题 badge：
 \${''/* @SLOT:TITLE_BADGE */}<span class="ver-badge">📱 本地版</span>\${''/* @SLOT:TITLE_BADGE_END */}
 
-// Header actions 同步状态（留空）：
-\${''/* @SLOT:SYNC_STATUS */}\${''/* @SLOT:SYNC_STATUS_END */}
-
 // 同步按钮区域（留空，备份按钮放外面）：
 \${''/* @SLOT:SYNC_BUTTON */}\${''/* @SLOT:SYNC_BUTTON_END */}
 
@@ -435,6 +429,10 @@ const handleApplyBackup=useCallback(d=>{...},[addToast]);
 
 // document.title 还原处：
 /* @SLOT:DOC_TITLE_FALLBACK */
+
+// ═══ 以下为可选（旧版兼容，v2.3不再需要）═══
+// 如果本地版有 SYNC_STATUS 插槽，转换时会自动清空
+// \${''/* @SLOT:SYNC_STATUS */}\${''/* @SLOT:SYNC_STATUS_END */}
 `.trim();
 </script>
 </body>
